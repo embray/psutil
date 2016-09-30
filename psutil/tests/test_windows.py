@@ -326,12 +326,15 @@ class TestDualProcessImplementation(unittest.TestCase):
     """
 
     fun_names = [
-        # function name, tolerance
-        ('proc_cpu_times', 0.2),
-        ('proc_create_time', 0.5),
-        ('proc_num_handles', 1),  # 1 because impl #1 opens a handle
-        ('proc_memory_info', 1024),  # KB
-        ('proc_io_counters', 0),
+        # function name, tolerance, compare to, pid exceptions
+        ('proc_cpu_times', 0.2, ('user_time', 'kernel_time'), ()),
+        ('proc_create_time', 0.5, ('create_time',), (0, 4)),
+        # tolerance=1 because impl #1 opens a handle
+        ('proc_num_handles', 1, ('num_handles',), ()),
+        # tolerance of 1 KB
+        ('proc_memory_info', 1024, cext.proc_memory_info_2, (os.getpid(),)),
+        ('proc_io_counters', 0,
+         ('io_rcount', 'io_wcount', 'io_rbytes', 'io_wbytes'), ()),
     ]
 
     def test_compare_values(self):
@@ -356,52 +359,63 @@ class TestDualProcessImplementation(unittest.TestCase):
                         diff = abs(a - b)
                         self.assertLessEqual(diff, tolerance)
 
-        from psutil._pswindows import ntpinfo
-        failures = []
-        for p in psutil.process_iter():
-            try:
-                nt = ntpinfo(*cext.proc_info(p.pid))
-            except psutil.NoSuchProcess:
-                continue
-            assert_ge_0(nt)
+        def compare_all_methods(p, nt):
+            failures = []
+            for name, tolerance, comp, skip_pids in self.fun_names:
+                if p.pid in skip_pids:
+                    continue
 
-            for name, tolerance in self.fun_names:
-                if name == 'proc_memory_info' and p.pid == os.getpid():
-                    continue
-                if name == 'proc_create_time' and p.pid in (0, 4):
-                    continue
                 meth = wrap_exceptions(getattr(cext, name))
+
                 try:
                     ret = meth(p.pid)
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
+
                 # compare values
                 try:
-                    if name == 'proc_cpu_times':
-                        compare_with_tolerance(ret[0], nt.user_time, tolerance)
-                        compare_with_tolerance(ret[1],
-                                               nt.kernel_time, tolerance)
-                    elif name == 'proc_create_time':
-                        compare_with_tolerance(ret, nt.create_time, tolerance)
-                    elif name == 'proc_num_handles':
-                        compare_with_tolerance(ret, nt.num_handles, tolerance)
-                    elif name == 'proc_io_counters':
-                        compare_with_tolerance(ret[0], nt.io_rcount, tolerance)
-                        compare_with_tolerance(ret[1], nt.io_wcount, tolerance)
-                        compare_with_tolerance(ret[2], nt.io_rbytes, tolerance)
-                        compare_with_tolerance(ret[3], nt.io_wbytes, tolerance)
-                    elif name == 'proc_memory_info':
+                    if isinstance(comp, tuple):
+                        attrs = tuple(getattr(nt, attr) for attr in comp)
+                        if not isinstance(ret, tuple) and len(attrs) == 1:
+                            attrs = attrs[0]
+                        compare_with_tolerance(ret, attrs, tolerance)
+                    elif callable(comp):
                         try:
-                            rawtupl = cext.proc_memory_info_2(p.pid)
+                            rawtupl = comp(p.pid)
                         except psutil.NoSuchProcess:
                             continue
                         compare_with_tolerance(ret, rawtupl, tolerance)
                 except AssertionError:
                     trace = traceback.format_exc()
-                    msg = '%s\npid=%s, method=%r, ret_1=%r, ret_2=%r' % (
-                        trace, p.pid, name, ret, nt)
+                    msg = '%s\nname=%s, pid=%s, method=%r, ret_1=%r, ' \
+                          'ret_2=%r' % (
+                            trace, p.name(), p.pid, name, ret, nt)
                     failures.append(msg)
                     break
+
+                return failures
+
+        from psutil._pswindows import ntpinfo
+        failures = []
+        for p in psutil.process_iter():
+            if p.pid != os.getpid():
+                try:
+                    p.suspend()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            try:
+                try:
+                    nt = ntpinfo(*cext.proc_info(p.pid))
+                except psutil.NoSuchProcess:
+                    continue
+
+                assert_ge_0(nt)
+
+                failures.extend(compare_all_methods(p, nt))
+            finally:
+                if p.pid != os.getpid():
+                    p.resume()
 
         if failures:
             self.fail('\n\n'.join(failures))
@@ -469,7 +483,7 @@ class TestDualProcessImplementation(unittest.TestCase):
         # test that NPS is raised by the 2nd implementation in case a
         # process no longer exists
         ZOMBIE_PID = max(psutil.pids()) + 5000
-        for name, _ in self.fun_names:
+        for name, _, _, _ in self.fun_names:
             meth = wrap_exceptions(getattr(cext, name))
             self.assertRaises(psutil.NoSuchProcess, meth, ZOMBIE_PID)
 

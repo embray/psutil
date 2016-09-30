@@ -393,7 +393,7 @@ class TestDualProcessImplementation(unittest.TestCase):
                     failures.append(msg)
                     break
 
-                return failures
+            return failures
 
         from psutil._pswindows import ntpinfo
         failures = []

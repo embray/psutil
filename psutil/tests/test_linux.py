@@ -1866,7 +1866,7 @@ class TestProcess(unittest.TestCase):
             self.assertRaises(psutil.AccessDenied, psutil.Process().threads)
 
     def test_exe_mocked(self):
-        with mock.patch('psutil._pslinux.readlink',
+        with mock.patch('psutil._pslinux_common.readlink',
                         side_effect=OSError(errno.ENOENT, "")) as m1:
             with mock.patch('psutil.Process.cmdline',
                             side_effect=psutil.AccessDenied(0, "")) as m2:

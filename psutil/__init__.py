@@ -357,6 +357,11 @@ _psplatform.TimeoutExpired = TimeoutExpired
 if POSIX:
     from . import _psposix
     _psposix.TimeoutExpired = TimeoutExpired
+if LINUX:
+    from . import _pslinux_common
+    _pslinux_common.NoSuchProcess = NoSuchProcess
+    _pslinux_common.ZombieProcess = ZombieProcess
+    _pslinux_common.AccessDenied = AccessDenied
 
 
 # =====================================================================

@@ -131,8 +131,8 @@ for:
       only:
         - os: Cygwin
     init:
-      - echo "%PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% for %OS%"
-      - set PATH=%CYG_ROOT%\\home\\appveyor\\.local\\bin;%CYG_ROOT%\\bin;%PATH%
+      - "echo %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% for %OS%"
+      - "set PATH=%CYG_ROOT%\\home\\appveyor\\.local\\bin;%CYG_ROOT%\\bin;%PATH%"
     install:
       - ps: |
           $python = "python" + $Env:PYTHON_VERSION[0] + $Env:PYTHON_VERSION[2]
@@ -141,18 +141,12 @@ for:
             -ArgumentList "-q -P $python,$python-devel,$python-pip,gcc-core,git"
       - "%PYTHON% -m pip --version"
       - "%PYTHON% -m pip install --upgrade --user setuptools pip"
-      - >
-        bash -c '
-          set +e;
-          export \
-            PYTHONWARNINGS=always \
-            PYTHONUNBUFFERED=1 \
-            PSUTIL_TESTING=1 \
-            PSUTIL_DEBUG=1;
-          %PYTHON% -m pip install --user setuptools;
-          %PYTHON% setup.py install;
-          %PYTHON% psutil/tests/runner.py;
-          %PYTHON% psutil/tests/test_memleaks.py'
-    test_script: off
+      - "%PYTHON% setup.py install"
+    test_script:
+      - "set PYTHONWARNINGS=always"
+      - "set PYTHONUNBUFFERED=1"
+      - "set PSUTIL_TESTING=1"
+      - "set PSUTIL_DEBUG=1"
+      - "%PYTHON% psutil/tests/runner.py"
     after_test: off
     artifacts: off

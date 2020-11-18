@@ -1094,6 +1094,10 @@ class TestProcess(PsutilTestCase):
                         side_effect=psutil.NoSuchProcess(0, 'foo')):
             self.assertIsNone(p.parent())
 
+    @unittest.skipIf(CI_TESTING and CYGWIN,
+                     "test fails on Cygwin in CI since a Cygwin process run "
+                     "from a cmd shell only has ppid of 1 which is not a "
+                     "real process")
     @retry_on_failure()
     def test_parents(self):
         parent = psutil.Process()

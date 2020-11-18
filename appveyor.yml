@@ -66,7 +66,7 @@ environment:
 
     - os: Cygwin
       CYG_ROOT: "C:\\cygwin64"
-      PYTHON: "python3.7m.exe"
+      PYTHON: "python3.7m"
       PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
 
@@ -138,14 +138,21 @@ for:
           $python = "python" + $Env:PYTHON_VERSION[0] + $Env:PYTHON_VERSION[2]
           Start-Process -NoNewWindow -Wait `
             -FilePath $Env:CYG_ROOT\setup-x86_64.exe `
-            -ArgumentList "-q -P $python,$python-devel,$python-pip,binutils,gcc-core,gcc-g++,git,libffi-devel"
+            -ArgumentList "-q -P $python,$python-devel,$python-pip,gcc-core,git"
       - "%PYTHON% -m pip --version"
       - "%PYTHON% -m pip install --upgrade --user setuptools pip"
-      # Delete make.bat so it doesn't get run instead of GNU make
-      - "rm -f make.bat"
-      - "make setup-dev-env PYTHON=%PYTHON%"
-      - "%PYTHON% -m pip freeze"
-      - "make install PYTHON=%PYTHON%"
+      - >
+        bash -c '
+          set +e;
+          export \
+            PYTHONWARNINGS=always \
+            PYTHONUNBUFFERED=1 \
+            PSUTIL_TESTING=1 \
+            PSUTIL_DEBUG=1;
+          %PYTHON% -m pip install --user setuptools;
+          %PYTHON% setup.py install;
+          %PYTHON% psutil/tests/runner.py;
+          %PYTHON% psutil/tests/test_memleaks.py'
     test_script: off
     after_test: off
     artifacts: off

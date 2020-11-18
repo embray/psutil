@@ -738,7 +738,15 @@ class TestProcess(PsutilTestCase):
     def test_long_cmdline(self):
         testfn = self.get_testfn()
         create_exe(testfn)
-        cmdline = [testfn] + (["0123456789"] * 20)
+        if CYGWIN:
+            # The test will fail if the process exits immediately because
+            # it will become immediately zombified and impossible to determine
+            # the original exe name
+            cmdline = [testfn, "-c",
+                       "import time; [time.sleep(0.01) for x in range(3000)]"]
+            cmdline += (["0123456789"] * 20)
+        else:
+            cmdline = [testfn] + (["0123456789"] * 20)
         p = self.spawn_psproc(cmdline)
         self.assertEqual(p.cmdline(), cmdline)
 

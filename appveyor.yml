@@ -138,7 +138,7 @@ for:
           $python = "python" + $Env:PYTHON_VERSION[0] + $Env:PYTHON_VERSION[2]
           Start-Process -NoNewWindow -Wait `
             -FilePath $Env:CYG_ROOT\setup-x86_64.exe `
-            -ArgumentList "-q -P $python,$python-devel,$python-pip,gcc-core,git"
+            -ArgumentList "-q -P $python,$python-devel,$python-pip,binutils,gcc-core,git"
       - "%PYTHON% -m pip --version"
       - "%PYTHON% -m pip install --upgrade --user setuptools pip"
       - "%PYTHON% setup.py install"

@@ -66,7 +66,7 @@ environment:
 
     - os: Cygwin
       CYG_ROOT: "C:\\cygwin64"
-      PYTHON: /usr/bin/python3.7
+      PYTHON: "python3.7m.exe"
       PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
 
@@ -132,3 +132,20 @@ for:
         - os: Cygwin
     init:
       - echo "%PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% for %OS%"
+      - set PATH=%CYG_ROOT%\\bin;%PATH%
+    install:
+      - ps: |
+          $python = "python" + $Env:PYTHON_VERSION[0] + $Env:PYTHON_VERSION[2]
+          Start-Process -NoNewWindow -Wait `
+            -FilePath $Env:CYG_ROOT\setup-x86_64.exe `
+            -ArgumentList "-q -P $python,$python-devel,$python-pip,gcc-core,gcc-g++,git"
+      - "%PYTHON% -m pip --version"
+      - "%PYTHON% -m pip install --upgrade --user setuptools pip"
+      # Delete make.bat so it doesn't get run instead of GNU make
+      - "rm -f make.bat"
+      - "make setup-dev-env"
+      - "%PYTHON% -m pip freeze"
+      - "make install"
+    test_script: off
+    after_test: off
+    artifacts: off

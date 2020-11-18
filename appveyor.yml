@@ -148,5 +148,5 @@ for:
       - "set PSUTIL_TESTING=1"
       - "set PSUTIL_DEBUG=1"
       - "%PYTHON% psutil/tests/runner.py"
-    after_test: off
-    artifacts: off
+    after_test: []
+    artifacts: []

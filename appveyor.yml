@@ -63,6 +63,11 @@ environment:
     - PYTHON: "C:\\Python39-x64"
       PYTHON_VERSION: "3.9.x"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
+    - os: Cygwin
+      CYG_ROOT: "C:\\cygwin64"
+      PYTHON: /usr/bin/python3.7
+      PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
 
 init:
@@ -110,9 +115,20 @@ only_commits:
     - psutil/_common.py
     - psutil/_compat.py
     - psutil/_psutil_common.*
+    - psutil/_psutil_cygwin.*
     - psutil/_psutil_windows.*
+    - psutil/_pscygwin.py
     - psutil/_pswindows.py
     - psutil/arch/windows/*
     - psutil/tests/*
     - scripts/*
     - setup.py
+
+# Cygwin build
+for:
+  -
+    matrix:
+      only:
+        - os: Cygwin
+    init:
+      - echo "%PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% for %OS%"

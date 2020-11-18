@@ -132,20 +132,20 @@ for:
         - os: Cygwin
     init:
       - echo "%PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% for %OS%"
-      - set PATH=%CYG_ROOT%\\bin;%PATH%
+      - set PATH=%CYG_ROOT%\\home\\appveyor\\.local\\bin;%CYG_ROOT%\\bin;%PATH%
     install:
       - ps: |
           $python = "python" + $Env:PYTHON_VERSION[0] + $Env:PYTHON_VERSION[2]
           Start-Process -NoNewWindow -Wait `
             -FilePath $Env:CYG_ROOT\setup-x86_64.exe `
-            -ArgumentList "-q -P $python,$python-devel,$python-pip,gcc-core,gcc-g++,git"
+            -ArgumentList "-q -P $python,$python-devel,$python-pip,gcc-core,gcc-g++,git,libffi-devel"
       - "%PYTHON% -m pip --version"
       - "%PYTHON% -m pip install --upgrade --user setuptools pip"
       # Delete make.bat so it doesn't get run instead of GNU make
       - "rm -f make.bat"
-      - "make setup-dev-env"
+      - "make setup-dev-env PYTHON=%PYTHON%"
       - "%PYTHON% -m pip freeze"
-      - "make install"
+      - "make install PYTHON=%PYTHON%"
     test_script: off
     after_test: off
     artifacts: off

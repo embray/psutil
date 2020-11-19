@@ -149,5 +149,4 @@ for:
       - "set PSUTIL_DEBUG=1"
       - "%PYTHON% psutil/tests/runner.py"
     after_test:
-      - "true"
-    artifacts: []
+      - "%PYTHON" setup.py bdist_wheel

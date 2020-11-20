@@ -256,7 +256,6 @@ static PyObject*
 psutil_net_if_addrs(PyObject* self, PyObject* args) {
     struct ifaddrs *ifaddr, *ifa;
     int family;
-    char *name;
 
     PyObject *py_retlist = PyList_New(0);
     PyObject *py_tuple = NULL;
@@ -275,15 +274,6 @@ psutil_net_if_addrs(PyObject* self, PyObject* args) {
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if (!ifa->ifa_addr)
             continue;
-#ifdef PSUTIL_CYGWIN
-        // Support using the Cygwin-specific ifaddrs_hwdata struct to get
-        // the interface's "friendly name" rather than its more opaque
-        // UUID name
-        struct ifaddrs_hwdata *ifhwdata = ifa->ifa_data;
-        name = ifhwdata->ifa_frndlyname.ifrf_friendlyname;
-#else
-        name = ifa->ifa_name;
-#endif
         family = ifa->ifa_addr->sa_family;
         py_address = psutil_convert_ipaddr(ifa->ifa_addr, family);
         // If the primary address can't be determined just skip it.
@@ -317,7 +307,7 @@ psutil_net_if_addrs(PyObject* self, PyObject* args) {
             goto error;
         py_tuple = Py_BuildValue(
             "(siOOOO)",
-            name,
+            ifa->ifa_name,
             family,
             py_address,
             py_netmask,

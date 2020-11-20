@@ -318,6 +318,7 @@ elif CYGWIN:
         'psutil._psutil_cygwin',
         sources=sources + [
             'psutil/_psutil_cygwin.c',
+            'psutil/arch/windows/net.c',
             'psutil/arch/windows/process_utils.c',
             'psutil/arch/windows/socks.c'],
         define_macros=macros,

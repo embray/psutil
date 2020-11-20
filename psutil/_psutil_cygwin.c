@@ -8,6 +8,7 @@
 #include <sys/cygwin.h>
 
 #include "_psutil_common.h"
+#include "arch/windows/net.h"
 #include "arch/windows/socks.h"
 
 
@@ -81,6 +82,12 @@ PsutilMethods[] = {
     // --- system-related functions
     {"net_connections", psutil_net_connections, METH_VARARGS,
      "Return system-wide connections"},
+    {"net_if_addrs", psutil_net_if_addrs, METH_VARARGS,
+     "Return NICs addresses."},
+    {"net_if_stats", psutil_net_if_stats, METH_VARARGS,
+     "Return NICs stats."},
+    {"net_io_counters", psutil_net_io_counters, METH_VARARGS,
+     "Return dict of tuples of networks I/O information."},
 
     // --- cygwin-specific functions
     {"cygpid_to_winpid", psutil_cygpid_to_winpid, METH_VARARGS,

@@ -12,6 +12,11 @@
 #include <wchar.h>
 #include <ws2tcpip.h>
 
+#ifdef __CYGWIN__
+// Additional includes needed to compile this module on Cygwin
+#include <iphlpapi.h>
+#endif
+
 #include "../../_psutil_common.h"
 
 

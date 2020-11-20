@@ -198,6 +198,42 @@ convert_kvm_err(const char *syscall, char *errbuf) {
 
 
 // ====================================================================
+// --- Cygwin
+// ====================================================================
+
+#ifdef PSUTIL_CYGWIN
+
+// Partial implementation of sprintf_s: does not validation the format
+// string, but we are not using this in any context where there would
+// be a user-supplied format string.  Otherwise has correct semantics
+// for handling formatted strings that would not fit the buffer.
+int sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...) {
+    if (buffer == NULL || format == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    va_list args;
+    int res;
+    va_start(args, format);
+    res = vsnprintf(buffer, sizeOfBuffer, format, args);
+    if (res < 0) {
+        return res;
+    }
+    if (res >= (int)sizeOfBuffer) {
+        // Formatted string was too large for the buffer plus terminating
+        // NULL; this means the first byte of the buffer should be set to
+        // 0 and return -1
+        buffer[0] = '\0';
+        return -1;
+    }
+    return res;
+}
+
+#endif  // PSUTIL_CYGWIN
+
+
+// ====================================================================
 // --- Windows
 // ====================================================================
 

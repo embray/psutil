@@ -278,7 +278,6 @@ class TestSystemAPITypes(PsutilTestCase):
                 self.assertIsInstance(addr.netmask, (str, type(None)))
                 self.assertIsInstance(addr.broadcast, (str, type(None)))
 
-    @unittest.skipIf(CYGWIN, "net_if_stats not supported yet on Cygwin")
     def test_net_if_stats(self):
         # Duplicate of test_system.py. Keep it anyway.
         for ifname, info in psutil.net_if_stats().items():
@@ -292,7 +291,6 @@ class TestSystemAPITypes(PsutilTestCase):
             self.assertIsInstance(info.mtu, int)
 
     @unittest.skipIf(not HAS_NET_IO_COUNTERS, 'not supported')
-    @unittest.skipIf(CYGWIN, "net_io_counters not supported yet on Cygwin")
     def test_net_io_counters(self):
         # Duplicate of test_system.py. Keep it anyway.
         for ifname, _ in psutil.net_io_counters(pernic=True).items():

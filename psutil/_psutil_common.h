@@ -52,6 +52,14 @@ static const int PSUTIL_CONN_NONE = 128;
                                   ((ierr) ? (ierr) : GetLastError())); \
     PyErr_SetFromErrno(PyExc_OSError); \
 })
+
+// Functions and macros from the MSCRT that are missing on Cygwin
+#ifndef _countof
+#define _countof(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+int sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...);
+
 #endif // PSUTIL_CYGWIN
 
 // --- _Py_PARSE_PID

@@ -741,7 +741,6 @@ class TestNetAPIs(PsutilTestCase):
             self.assertEqual(psutil.net_io_counters(pernic=True), {})
             assert m.called
 
-    @unittest.skipIf(CYGWIN, "net_if_stats not supported yet on Cygwin")
     def test_net_if_addrs(self):
         nics = psutil.net_if_addrs()
         assert nics, nics
@@ -819,7 +818,6 @@ class TestNetAPIs(PsutilTestCase):
             else:
                 self.assertEqual(addr.address, '06-3d-29-00-00-00')
 
-    @unittest.skipIf(CYGWIN, "net_if_stats not supported yet on Cygwin")
     def test_net_if_stats(self):
         nics = psutil.net_if_stats()
         assert nics, nics

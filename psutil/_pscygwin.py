@@ -156,7 +156,7 @@ cpu_stats = _pslinux.cpu_stats
 # =====================================================================
 
 
-net_if_addrs = _pslinux.net_if_addrs
+net_if_addrs = _pswindows.net_if_addrs
 
 
 # TODO: Does not support listing UNIX sockets yet.  This should be possible to
@@ -193,18 +193,8 @@ def net_connections(kind, _pid=-1):
     return cons
 
 
-def net_io_counters():
-    """Return network I/O statistics for every network interface
-    installed on the system as a dict of raw tuples.
-    """
-    raise NotImplementedError("net_io_counters not implemented on Cygwin")
-
-
-def net_if_stats():
-    """Return information about each NIC (network interface card)
-    installed on the system.
-    """
-    raise NotImplementedError("net_if_stats not implemented on Cygwin")
+net_io_counters = _pswindows.net_io_counters
+net_if_stats = _pswindows.net_if_stats
 
 
 # =====================================================================

@@ -202,12 +202,7 @@ net_if_stats = _pswindows.net_if_stats
 # =====================================================================
 
 
-def disk_usage(path):
-    """Return disk usage statistics about the given *path* as a
-    namedtuple including total, used and free space expressed in bytes
-    plus the percentage usage.
-    """
-    raise NotImplementedError("disk_usage not implemented on Cygwin")
+disk_usage = _psposix.disk_usage
 
 
 def disk_io_counters(perdisk=False):

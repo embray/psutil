@@ -297,7 +297,6 @@ class TestFSAPIs(BaseUnicodeTest):
                 self.assertIsInstance(conn.laddr, str)
                 self.assertEqual(conn.laddr, name)
 
-    @unittest.skipIf(CYGWIN, "disk_usage not supported yet on Cygwin")
     def test_disk_usage(self):
         dname = self.funky_name + "2"
         self.addCleanup(safe_rmpath, dname)

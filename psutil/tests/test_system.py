@@ -556,7 +556,6 @@ class TestCpuAPIs(PsutilTestCase):
 class TestDiskAPIs(PsutilTestCase):
 
     @unittest.skipIf(PYPY and not IS_64BIT, "unreliable on PYPY32 + 32BIT")
-    @unittest.skipIf(CYGWIN, "disk_usage not supported yet on Cygwin")
     def test_disk_usage(self):
         usage = psutil.disk_usage(os.getcwd())
         self.assertEqual(usage._fields, ('total', 'used', 'free', 'percent'))
@@ -589,7 +588,6 @@ class TestDiskAPIs(PsutilTestCase):
         with self.assertRaises(UnicodeEncodeError):
             psutil.disk_usage(UNICODE_SUFFIX)
 
-    @unittest.skipIf(CYGWIN, "disk_usage not supported yet on Cygwin")
     def test_disk_usage_bytes(self):
         psutil.disk_usage(b'.')
 

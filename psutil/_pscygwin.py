@@ -205,13 +205,28 @@ net_if_stats = _pswindows.net_if_stats
 disk_usage = _psposix.disk_usage
 
 
-def disk_io_counters(perdisk=False):
-    """Return disk I/O statistics for every disk installed on the
-    system as a dict of raw tuples.
-    """
-    # Note: Currently not implemented on Cygwin, but rather than raise
-    # a NotImplementedError we can return an empty dict here.
-    return {}
+def disk_io_counters():
+    """Return dict of tuples of disks I/O information."""
+
+    # Small wrapper around the Windows implementation that converts
+    # PhysicalDriveN numbers to sd[a-z]+ according to the rules used by Cygwin;
+    # see
+    # https://cygwin.com/git/?p=newlib-cygwin.git;a=blob;f=winsup/cygwin/devices.cc;h=3875a43cd5a22ce064af1804d90e02a70e82b683;hb=HEAD#l15000
+    # Undefined behavior for > 52 drives it appears.
+    disk_io = _pswindows.disk_io_counters()
+    for k in list(disk_io):
+        drive_num = int(k[len('PhysicalDrive'):])
+        devname = 'sd'
+        if (drive_num >= 26):
+            drive_num -= 26
+            devname += chr(drive_num / 26 + ord('a'))
+            drive_num %= 26
+
+        devname += chr(drive_num + ord('a'))
+        disk_io[devname] = disk_io[k]
+        del disk_io[k]
+
+    return disk_io
 
 
 def disk_partitions(all=False):

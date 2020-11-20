@@ -657,7 +657,6 @@ class TestDiskAPIs(PsutilTestCase):
                      '/proc/diskstats not available on this linux version')
     @unittest.skipIf(CI_TESTING and (CYGWIN or not psutil.disk_io_counters()),
                      "unreliable on CI")  # no visible disks
-    @unittest.skipIf(CYGWIN, "disk_io_counters not supported yet on Cygwin")
     def test_disk_io_counters(self):
         def check_ntuple(nt):
             self.assertEqual(nt[0], nt.read_count)
@@ -686,7 +685,6 @@ class TestDiskAPIs(PsutilTestCase):
             assert key, key
             check_ntuple(ret[key])
 
-    @unittest.skipIf(CYGWIN, "disk_io_counters not supported yet on Cygwin")
     def test_disk_io_counters_no_disks(self):
         # Emulate a case where no disks are installed, see:
         # https://github.com/giampaolo/psutil/issues/1062

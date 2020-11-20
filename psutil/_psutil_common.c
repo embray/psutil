@@ -207,8 +207,8 @@ convert_kvm_err(const char *syscall, char *errbuf) {
 // string, but we are not using this in any context where there would
 // be a user-supplied format string.  Otherwise has correct semantics
 // for handling formatted strings that would not fit the buffer.
-int sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...) {
-    if (buffer == NULL || format == NULL) {
+int sprintf_s(char *str, size_t n, const char *format, ...) {
+    if (str == NULL || format == NULL) {
         errno = EINVAL;
         return -1;
     }
@@ -216,18 +216,81 @@ int sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...) {
     va_list args;
     int res;
     va_start(args, format);
-    res = vsnprintf(buffer, sizeOfBuffer, format, args);
+    res = vsnprintf(str, n, format, args);
     if (res < 0) {
         return res;
     }
-    if (res >= (int)sizeOfBuffer) {
+    if (res >= (int)n) {
         // Formatted string was too large for the buffer plus terminating
         // NULL; this means the first byte of the buffer should be set to
         // 0 and return -1
-        buffer[0] = '\0';
+        str[0] = '\0';
         return -1;
     }
     return res;
+}
+
+int strcat_s(char *dest, size_t n, const char *src) {
+    if (dest == NULL) {
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    if (src == NULL) {
+        dest[0] = '\0';
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    // Ensure the destination string is null-terminated
+    size_t dest_len = 0;
+    while (dest_len < n && dest[dest_len] != '\0')
+        dest_len++;
+
+    if (dest_len == n) {
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    // Attempt to copy src into dest; per strncpy, if there is not enough
+    // space in the destination buffer for all of src plus its null terminator
+    // the resulting buffer will not be null terminated; this is an error for
+    // strcat_s
+    strncat(dest, src, n);
+    if (dest[n] != '\0') {
+        // This is the documented error condition
+        dest[0] = '\0';
+        errno = ERANGE;
+        return ERANGE;
+    }
+
+    return 0;
+}
+
+// Similar to strcat_s
+int strcpy_s(char *dest, size_t n, const char *src) {
+    if (dest == NULL) {
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    if (src == NULL) {
+        dest[0] = '\0';
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    size_t src_len = strnlen(src, n);
+    if (src_len == n) {
+        // src_len can be at most n, meaning no terminating NULL was found in
+        // the first n bytes of src and dest is too small for src + '\0'
+        dest[0] = '\0';
+        errno = ERANGE;
+        return ERANGE;
+    }
+
+    strncpy(dest, src, n);
+    return 0;
 }
 
 #endif  // PSUTIL_CYGWIN

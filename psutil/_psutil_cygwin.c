@@ -8,6 +8,7 @@
 #include <sys/cygwin.h>
 
 #include "_psutil_common.h"
+#include "arch/windows/disk.h"
 #include "arch/windows/net.h"
 #include "arch/windows/socks.h"
 
@@ -24,7 +25,6 @@
         return NULL; \
     }
 
-NOT_IMPLEMENTED_STUB(disk_io_counters)
 NOT_IMPLEMENTED_STUB(pids)
 NOT_IMPLEMENTED_STUB(pid_exists)
 NOT_IMPLEMENTED_STUB(ppid_map)
@@ -80,6 +80,8 @@ psutil_winpid_to_cygpid(PyObject *self, PyObject *args) {
 static PyMethodDef
 PsutilMethods[] = {
     // --- system-related functions
+    {"disk_io_counters", psutil_disk_io_counters, METH_VARARGS,
+     "Return dict of tuples of disks I/O information."},
     {"net_connections", psutil_net_connections, METH_VARARGS,
      "Return system-wide connections"},
     {"net_if_addrs", psutil_net_if_addrs, METH_VARARGS,
@@ -100,8 +102,6 @@ PsutilMethods[] = {
      "Set psutil in testing mode"},
 
     // --- not implemented stubs
-    {"disk_io_counters", psutil_disk_io_counters, METH_VARARGS,
-     "Return dict of tuples of disks I/O information."},
     {"pids", psutil_pids, METH_VARARGS,
      "Returns a list of PIDs currently running on the system"},
     {"pid_exists", psutil_pid_exists, METH_VARARGS,

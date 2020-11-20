@@ -53,12 +53,29 @@ static const int PSUTIL_CONN_NONE = 128;
     PyErr_SetFromErrno(PyExc_OSError); \
 })
 
+#define PyErr_SetFromWindowsErrWithFilename(ierr, filename) ({ \
+    errno = (int) cygwin_internal(CW_GET_ERRNO_FROM_WINERROR, \
+                                  ((ierr) ? (ierr) : GetLastError())); \
+    PyErr_SetFromErrnoWithFilename(PyExc_OSError, filename); \
+})
+
 // Functions and macros from the MSCRT that are missing on Cygwin
 #ifndef _countof
 #define _countof(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-int sprintf_s(char *buffer, size_t sizeOfBuffer, const char *format, ...);
+// In practice on Cygwin these will always be the char versions
+#ifndef _tcscmp
+#define _tcscmp strcmp
+#endif
+
+#ifndef _stprintf_s
+#define _stprintf_s sprintf_s
+#endif
+
+int sprintf_s(char *str, size_t n, const char *format, ...);
+int strcat_s(char *dest, size_t n, const char *src);
+int strcpy_s(char *dest, size_t n, const char *src);
 
 #endif // PSUTIL_CYGWIN
 

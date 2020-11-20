@@ -375,7 +375,7 @@ psutil_net_if_stats(PyObject *self, PyObject *args) {
         ifname_found = 0;
         pCurrAddresses = pAddresses;
         while (pCurrAddresses) {
-            sprintf_s(descr, MAX_PATH, "%wS", pCurrAddresses->Description);
+            sprintf_s(descr, MAX_PATH, "%lS", pCurrAddresses->Description);
             if (lstrcmp(descr, pIfRow->bDescr) == 0) {
                 py_nic_name = PyUnicode_FromWideChar(
                     pCurrAddresses->FriendlyName,

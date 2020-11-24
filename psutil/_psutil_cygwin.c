@@ -223,6 +223,12 @@ PsutilMethods[] = {
     {"conv_path", psutil_conv_path, METH_VARARGS,
      "Convert between Windows paths and Cygwin paths."},
 
+    // --- windows API bindings
+    {"win32_QueryDosDevice", psutil_win32_QueryDosDevice, METH_VARARGS,
+     "QueryDosDevice binding"},
+    {"win32_QuerySymbolicLink", psutil_win32_QuerySymbolicLink, METH_VARARGS,
+     "NtQuerySymbolicLinkObject binding"},
+
     // --- others
     {"set_testing", psutil_set_testing, METH_NOARGS,
      "Set psutil in testing mode"},

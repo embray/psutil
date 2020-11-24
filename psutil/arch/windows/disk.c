@@ -10,6 +10,24 @@
 
 #include "../../_psutil_common.h"
 
+#ifdef PSUTIL_CYGWIN
+    // Cygwin doesn't import ntextapi.h, instead we provide the minimum
+    // declarations here
+    #include <winternl.h>
+    #define MALLOC_ZERO(x) calloc(x, 1)
+    #define SYMBOLIC_LINK_QUERY 1
+    NTSTATUS NTAPI NtOpenSymbolicLinkObject(
+      PHANDLE LinkHandle,
+      ACCESS_MASK DesiredAccess,
+      POBJECT_ATTRIBUTES ObjectAttributes
+    );
+    NTSTATUS NTAPI NtQuerySymbolicLinkObject(
+      HANDLE LinkHandle,
+      PUNICODE_STRING LinkTarget,
+      PULONG ReturnedLength
+    );
+#endif
+
 
 #ifndef _ARRAYSIZE
 #define _ARRAYSIZE(a) (sizeof(a)/sizeof(a[0]))
@@ -384,4 +402,118 @@ psutil_win32_QueryDosDevice(PyObject *self, PyObject *args) {
         d++;
     }
     return Py_BuildValue("s", "");
+}
+
+
+/*
+ * Given an NT filename like \\.\GLOBALROOT\Device\Harddisk0\Partition1 see
+ * if it is a symbolic link and return its link target if so (in this case
+ * it would be a DOS device path like \Device\HarddiskVolume1)
+ */
+#define GLOBALROOT_PREFIX "\\\\.\\GLOBALROOT"
+
+PyObject *
+psutil_win32_QuerySymbolicLink(PyObject *self, PyObject *args) {
+    UNICODE_STRING ntpath_uni, target_uni;
+    OBJECT_ATTRIBUTES obj;
+    HANDLE symlink;
+    NTSTATUS status;
+    char *ntpath_char;
+
+    if (!PyArg_ParseTuple(args, "s", &ntpath_char))
+        return NULL;
+
+    PyObject *ret = Py_BuildValue("s", ntpath_char);
+
+    // Cut off \\.\GLOBALROOT which is apparently not interpreted by
+    // NtOpenSymbolicLink despite supposedly being a symbolic link itself
+    // In any case according to
+    // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+    // Most APIs (which?) won't support "\\.\", only those that are designed
+    // to work with the device namespace
+    if (!strncasecmp(ntpath_char, GLOBALROOT_PREFIX "\\",
+                     sizeof(GLOBALROOT_PREFIX))) {
+        ntpath_char += sizeof(GLOBALROOT_PREFIX) - 1;
+    }
+
+#if PYTHON_MAJOR_VERSION >= 3
+    UTF8_STRING ntpath;
+    status = RtlInitUTF8String(&ntpath, ntpath_char);
+    if (!NT_SUCCESS(status)) {
+        PyErr_SetString(PyExc_ValueError, "path name too long");
+        return NULL;
+    }
+    status = RtlUTF8StringToUnicodeString(&ntpath_uni, &ntpath, TRUE);
+    if (!NT_SUCCESS(status)) {
+        if (status == STATUS_NO_MEMORY || status == STATUS_BUFFER_OVERFLOW) {
+            return PyErr_NoMemory();
+        } else if (status != STATUS_SOME_NOT_MAPPED) {
+            // There might be some mojibake but this is unlikely to occur
+            // unless the function is passed a bogus path
+            PyErr_SetString(PyExc_ValueError,
+                            "could not initialize path string");
+            return NULL;
+        }
+    }
+#else
+    ANSI_STRING ntpath;
+    RtlInitAnsiString(&ntpath, ntpath_char);
+    status = RtlAnsiStringToUnicodeString(&ntpath_uni, &ntpath, TRUE);
+    if (!NT_SUCCESS(status)) {
+        PyErr_SetString(PyExc_ValueError, "could not initialize path string");
+        return NULL;
+    }
+#endif
+
+    target_uni.Buffer = NULL;
+    target_uni.MaximumLength = 0;
+    target_uni.Length = 0;
+
+    InitializeObjectAttributes(&obj, &ntpath_uni, OBJ_CASE_INSENSITIVE, NULL,
+                               NULL);
+    status = NtOpenSymbolicLinkObject(&symlink, SYMBOLIC_LINK_QUERY, &obj);
+    if (!NT_SUCCESS(status))
+        goto error;
+
+    // Initialize target_uni to the typical MAX_SIZE for NT paths from
+    // https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    target_uni.Buffer = (WCHAR *)MALLOC_ZERO(32767 * sizeof(WCHAR));
+    target_uni.MaximumLength = 32767;
+    if (target_uni.Buffer == NULL)
+        goto error;
+
+    status = NtQuerySymbolicLinkObject(symlink, &target_uni, NULL);
+    if (!NT_SUCCESS(status))
+        // Again, somehow it was not actually symlink or something; the
+        // official docs don't list what error statuses could be returned
+        // by this function.
+        goto error;
+
+#if PYTHON_MAJOR_VERSION >= 3
+    UTF8_STRING target;
+    status = RtlUnicodeStringToUTF8String(&target, &target_uni, TRUE);
+    if (!NT_SUCCESS(status)) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "could not initialize target string");
+        goto error;
+    }
+    ret = Py_BuildValue("s", target.Buffer);
+    RtlFreeUTF8String(&target);
+#else
+    ANSI_STRING target;
+    status = RtlUnicodeStringToAnsiString(&target, &target_uni, TRUE);
+    if (!NT_SUCCESS(status)) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "could not initialize target string");
+        goto error;
+    }
+    ret = Py_BuildValue("s", target.Buffer);
+    RtlFreeAnsiString(&target);
+#endif
+
+error:
+    RtlFreeUnicodeString(&ntpath_uni);
+    if (target_uni.Buffer != NULL)
+        free(target_uni.Buffer);
+    return ret;
 }

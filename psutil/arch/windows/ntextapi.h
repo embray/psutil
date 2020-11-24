@@ -25,6 +25,9 @@ typedef LONG NTSTATUS;
 #define DOMAIN_LENGTH            17
 #define USERNAME_LENGTH          20
 
+// Undocumented NT namespace
+#define SYMBOLIC_LINK_QUERY 1
+
 // ================================================================
 // Enums
 // ================================================================
@@ -570,6 +573,14 @@ BOOLEAN (WINAPI * _WinStationQueryInformationW) (
 
 #define WinStationQueryInformationW _WinStationQueryInformationW
 
+NTSTATUS (NTAPI *_NtOpenSymbolicLinkObject) (
+  PHANDLE LinkHandle,
+  ACCESS_MASK DesiredAccess,
+  POBJECT_ATTRIBUTES ObjectAttributes
+);
+
+#define NtOpenSymbolicLinkObject _NtOpenSymbolicLinkObject
+
 NTSTATUS (NTAPI *_NtQueryInformationProcess) (
     HANDLE ProcessHandle,
     DWORD ProcessInformationClass,
@@ -578,6 +589,14 @@ NTSTATUS (NTAPI *_NtQueryInformationProcess) (
     PDWORD ReturnLength);
 
 #define NtQueryInformationProcess _NtQueryInformationProcess
+
+NTSTATUS (NTAPI *_NtQuerySymbolicLinkObject) (
+  HANDLE LinkHandle,
+  PUNICODE_STRING LinkTarget,
+  PULONG ReturnedLength
+);
+
+#define NtQuerySymbolicLinkObject _NtQuerySymbolicLinkObject
 
 NTSTATUS (NTAPI *_NtQuerySystemInformation) (
     ULONG SystemInformationClass,

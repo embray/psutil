@@ -229,9 +229,22 @@ def disk_io_counters():
     return disk_io
 
 
-def disk_partitions(all=False):
-    """Return mounted disk partitions as a list of namedtuples."""
-    raise NotImplementedError("disk_partitions not implemented on Cygwin")
+def disk_partitions(all):
+    """Return disk partitions."""
+    # The easiest way to get the partition table (and other path mounts )on
+    # Cygwin is to simply parse the contents of /etc/mtab
+    parts = []
+
+    with open_text('/etc/mtab') as fobj:
+        for line in fobj:
+            device, mountpoint, fstype, opts, _, _ = line.rsplit(' ', 5)
+            if not all and device == 'none':
+                continue
+
+            parts.append(_common.sdiskpart(device, mountpoint, fstype, opts,
+                                           None, None))
+
+    return parts
 
 
 # =====================================================================

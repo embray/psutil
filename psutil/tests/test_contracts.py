@@ -246,7 +246,6 @@ class TestSystemAPITypes(PsutilTestCase):
             self.assertIsInstance(k, str)
             self.assert_ntuple_of_nums(v, type_=(int, long))
 
-    @unittest.skipIf(CYGWIN, "disk_partitions not supported yet on Cygwin")
     def test_disk_partitions(self):
         # Duplicate of test_system.py. Keep it anyway.
         for disk in psutil.disk_partitions():

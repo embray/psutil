@@ -591,7 +591,6 @@ class TestDiskAPIs(PsutilTestCase):
     def test_disk_usage_bytes(self):
         psutil.disk_usage(b'.')
 
-    @unittest.skipIf(CYGWIN, "disk_partitions not supported yet on Cygwin")
     def test_disk_partitions(self):
         def check_ntuple(nt):
             self.assertIsInstance(nt.device, str)

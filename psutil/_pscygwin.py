@@ -4,6 +4,8 @@ from __future__ import division
 
 import errno
 import os
+import re
+import stat
 import sys
 import warnings
 from collections import namedtuple
@@ -41,6 +43,9 @@ CLOCK_TICKS = _pslinux.CLOCK_TICKS
 
 
 AF_LINK = _pslinux.AF_LINK
+
+
+GLOBALROOT_PREFIX = '\\\\.\\GLOBALROOT'
 
 
 # =====================================================================
@@ -177,16 +182,13 @@ def net_connections(kind, _pid=-1):
     # Filter out only those connections emanating from Cygwin processes and
     # replace their PIDs with the corresponding Cygwin PID
     if _pid == -1 and cons:
-        con_cls = type(cons[0])
-        pid_idx = con_cls._fields.index('pid')
-
         def conv(con):
             try:
                 pid = cext.winpid_to_cygpid(con.pid)
             except OSError:
                 return None
 
-            return con_cls(*(con[:pid_idx] + (pid,) + con[pid_idx + 1:]))
+            return con._replace(pid=pid)
 
         cons = list(filter(None, (conv(con) for con in cons)))
 
@@ -205,6 +207,54 @@ net_if_stats = _pswindows.net_if_stats
 disk_usage = _psposix.disk_usage
 
 
+device_prefix_map = {
+    'PhysicalDrive': '/dev/sd',
+    'Harddisk': '/dev/sd',
+    'CdRom': '/dev/scd',
+    'Tape': '/dev/nst',
+    'Floppy': '/dev/fd'
+}
+
+
+device_prefix_map_inv = dict((v, k) for k, v in device_prefix_map.items())
+
+
+device_name_re = re.compile(
+    r'(?P<type>PhysicalDrive|Harddisk|CdRom|Tape|Floppy)(?P<num>\d+)'
+    r'(/Partition(?P<partnum>\d+))?')
+
+
+def device_win_to_cyg(device_name):
+    match = device_name_re.search(device_name)
+    if not match:
+        return None
+
+    type_ = match.group('type')
+    num = match.group('num')
+    dev = device_prefix_map[type_]
+    if type_ not in ('PhysicalDrive', 'Harddisk'):
+        # Easy case
+        return dev + num
+
+    # Hard disks are trickier Convert PhysicalDriveN numbers to sd[a-z]+
+    # according to the rules used by Cygwin; see
+    # https://cygwin.com/git/?p=newlib-cygwin.git;a=blob;f=winsup/cygwin/devices.cc;h=3875a43cd5a22ce064af1804d90e02a70e82b683;hb=HEAD#l15000
+    # Undefined behavior for > 52 drives it appears.
+    num = int(num)
+    if (num >= 26):
+        num -= 26
+        dev += chr(num / 26 + ord('a'))
+        num %= 26
+
+    dev += chr(num + ord('a'))
+
+    partnum = match.group('partnum')
+    if partnum and partnum != '0':  # i.e. there is no /dev/sda0
+        dev += partnum
+
+    return dev
+
+
 def disk_io_counters():
     """Return dict of tuples of disks I/O information."""
 
@@ -215,14 +265,7 @@ def disk_io_counters():
     # Undefined behavior for > 52 drives it appears.
     disk_io = _pswindows.disk_io_counters()
     for k in list(disk_io):
-        drive_num = int(k[len('PhysicalDrive'):])
-        devname = 'sd'
-        if (drive_num >= 26):
-            drive_num -= 26
-            devname += chr(drive_num / 26 + ord('a'))
-            drive_num %= 26
-
-        devname += chr(drive_num + ord('a'))
+        devname = device_win_to_cyg(k)
         disk_io[devname] = disk_io[k]
         del disk_io[k]
 
@@ -231,6 +274,42 @@ def disk_io_counters():
 
 def disk_partitions(all):
     """Return disk partitions."""
+    # Get list of block devices and use cygpath to map the device name
+    # to a drive letter
+    drive_map = {}
+
+    for dev in os.listdir('/dev'):
+        dev = os.path.join('/dev', dev)
+        for prefix in device_prefix_map_inv:
+            # Some device types have multiple /dev/ entries; just take the
+            # ones from a 'canonical' list in device_prefix_map
+            if dev.startswith(prefix):
+                break
+        else:
+            continue
+
+        if not stat.S_ISBLK(os.stat(dev).st_mode):
+            # Check that it's a block block device
+            continue
+
+        # For some reason /dev/ mappings don't work with CCP_POSIX_TO_WIN_W;
+        # bug in Cygwin (it returns -1 with errno=14)?
+        winpath = cext.conv_path(cext.CCP_POSIX_TO_WIN_A, dev)
+
+        # If the path is a symbolic link (which it is for hard disks) resolve
+        # the link
+        winpath = cext.win32_QuerySymbolicLink(winpath)
+
+        if winpath.startswith(GLOBALROOT_PREFIX):
+            # Just get the part of the path that looks like a DOS device path
+            winpath = winpath[len(GLOBALROOT_PREFIX):]
+
+        # Now convert the DOS device path to its corresponding drive
+        # letter, if any
+        drive = cext.win32_QueryDosDevice(winpath)
+        if drive:
+            drive_map[drive] = dev
+
     # The easiest way to get the partition table (and other path mounts )on
     # Cygwin is to simply parse the contents of /etc/mtab
     parts = []
@@ -240,6 +319,11 @@ def disk_partitions(all):
             device, mountpoint, fstype, opts, _, _ = line.rsplit(' ', 5)
             if not all and device == 'none':
                 continue
+
+            if len(device) == 2 and device[1] == ':':
+                drive = device[:2]
+                if drive in drive_map:
+                    device = drive_map[drive]
 
             parts.append(_common.sdiskpart(device, mountpoint, fstype, opts,
                                            None, None))

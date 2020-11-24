@@ -655,7 +655,7 @@ class TestDiskAPIs(PsutilTestCase):
 
     @unittest.skipIf(LINUX and not os.path.exists('/proc/diskstats'),
                      '/proc/diskstats not available on this linux version')
-    @unittest.skipIf(CI_TESTING and (CYGWIN or not psutil.disk_io_counters()),
+    @unittest.skipIf(CI_TESTING and not psutil.disk_io_counters(),
                      "unreliable on CI")  # no visible disks
     def test_disk_io_counters(self):
         def check_ntuple(nt):
@@ -698,7 +698,6 @@ class TestDiskAPIs(PsutilTestCase):
 class TestNetAPIs(PsutilTestCase):
 
     @unittest.skipIf(not HAS_NET_IO_COUNTERS, 'not supported')
-    @unittest.skipIf(CYGWIN, "net_io_counters not supported yet on Cygwin")
     def test_net_io_counters(self):
         def check_ntuple(nt):
             self.assertEqual(nt[0], nt.bytes_sent)
